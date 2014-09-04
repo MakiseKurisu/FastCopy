@@ -701,7 +701,7 @@ LONG WINAPI Local_UnhandledExceptionFilter(struct _EXCEPTION_POINTERS *info)
 	context = info->ContextRecord;
 
 	len = sprintf(buf,
-#ifdef _WIN64
+#if     defined(_M_AMD64)
 		"------ %s -----\r\n"
 		" Date        : %d/%02d/%02d %02d:%02d:%02d\r\n"
 		" Code/Addr   : %p / %p\r\n"
@@ -717,7 +717,7 @@ LONG WINAPI Local_UnhandledExceptionFilter(struct _EXCEPTION_POINTERS *info)
 		, context->Rsi, context->Rdi, context->Rbp, context->Rsp
 		, context->R8,  context->R9,  context->R10, context->R11
 		, context->R12, context->R13, context->R14, context->R15
-#else
+#elif   defined(_M_IX86)
 		"------ %s -----\r\n"
 		" Date        : %d/%02d/%02d %02d:%02d:%02d\r\n"
 		" Code/Addr   : %X / %p\r\n"
@@ -729,14 +729,36 @@ LONG WINAPI Local_UnhandledExceptionFilter(struct _EXCEPTION_POINTERS *info)
 		, info->ExceptionRecord->ExceptionCode, info->ExceptionRecord->ExceptionAddress
 		, context->Eax, context->Ebx, context->Ecx, context->Edx
 		, context->Esi, context->Edi, context->Ebp, context->Esp
+#elif   defined(_M_ARM)
+        "------ %s -----\r\n"
+        " Date        : %d/%02d/%02d %02d:%02d:%02d\r\n"
+        " Code/Addr   : %p / %p\r\n"
+        " R0/R1/R2/R3 : %p / %p / %p / %p\r\n"
+        " R4/R5/R6/R7 : %p / %p / %p / %p\r\n"
+        " R8/R9/10/11 : %p / %p / %p / %p\r\n"
+        " IP/SP/LR/PC : %p / %p / %p / %p\r\n"
+        "------- stack info -----\r\n"
+        , ExceptionTitle
+        , tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, tm.wSecond
+        , info->ExceptionRecord->ExceptionCode, info->ExceptionRecord->ExceptionAddress
+        , context->R0, context->R1, context->R2, context->R3
+        , context->R4, context->R5, context->R6, context->R7
+        , context->R8, context->R9, context->R10, context->R11
+        , context->R12, context->Sp, context->Lr, context->Pc
+#else
+#error   Unknown platform.
 #endif
 		);
 	::WriteFile(hFile, buf, len, &len, 0);
 
-#ifdef _WIN64
+#if     defined(_M_AMD64)
 		esp = (char *)context->Rsp;
-#else
+#elif   defined(_M_IX86)
 		esp = (char *)context->Esp;
+#elif   defined(_M_ARM)
+        esp = (char *)context->Sp;
+#else
+#error   Unknown platform.
 #endif
 
 	for (i=0; i < MAX_STACKDUMP_SIZE / STACKDUMP_SIZE; i++) {
